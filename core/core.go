@@ -12,6 +12,7 @@ import (
 	ds "github.com/jbenet/go-ipfs/Godeps/_workspace/src/github.com/jbenet/go-datastore"
 	ma "github.com/jbenet/go-ipfs/Godeps/_workspace/src/github.com/jbenet/go-multiaddr"
 	context "github.com/jbenet/go-ipfs/Godeps/_workspace/src/golang.org/x/net/context"
+	metrics "github.com/jbenet/go-ipfs/metrics"
 	eventlog "github.com/jbenet/go-ipfs/thirdparty/eventlog"
 	debugerror "github.com/jbenet/go-ipfs/util/debugerror"
 
@@ -81,6 +82,7 @@ type IpfsNode struct {
 	Blocks     *bserv.BlockService  // the block service, get/add blocks.
 	DAG        merkledag.DAGService // the merkle dag service, get/add objects.
 	Resolver   *path.Resolver       // the path resolution system
+	Reporter   metrics.Reporter
 
 	// Online
 	PeerHost     p2phost.Host        // the network host (server+client)
@@ -252,6 +254,9 @@ func (n *IpfsNode) startOnlineServices(ctx context.Context, routingOption Routin
 	if err := startListening(ctx, n.PeerHost, n.Repo.Config()); err != nil {
 		return debugerror.Wrap(err)
 	}
+
+	// Set reporter
+	n.Reporter = n.PeerHost.GetBandwidthReporter()
 
 	n.Reprovider = rp.NewReprovider(n.Routing, n.Blockstore)
 	go n.Reprovider.ProvideEvery(ctx, kReprovideFrequency)

@@ -14,6 +14,7 @@ import (
 	peer "github.com/jbenet/go-ipfs/p2p/peer"
 	protocol "github.com/jbenet/go-ipfs/p2p/protocol"
 	pb "github.com/jbenet/go-ipfs/p2p/protocol/identify/pb"
+	mstream "github.com/jbenet/go-ipfs/p2p/protocol/stream"
 	config "github.com/jbenet/go-ipfs/repo/config"
 	eventlog "github.com/jbenet/go-ipfs/thirdparty/eventlog"
 	lgbl "github.com/jbenet/go-ipfs/util/eventlog/loggables"
@@ -80,6 +81,8 @@ func (ids *IDService) IdentifyConn(c inet.Conn) {
 		log.Debugf("error opening initial stream for %s", ID)
 		log.Event(context.TODO(), "IdentifyOpenFailed", c.RemotePeer())
 	} else {
+		bwc := ids.Host.GetBandwidthReporter()
+		s = mstream.NewMeteredStream(s, ID, c.RemotePeer(), bwc.LogRecvMessage, bwc.LogSentMessage)
 
 		// ok give the response to our handler.
 		if err := protocol.WriteHeader(s, ID); err != nil {
@@ -105,6 +108,9 @@ func (ids *IDService) IdentifyConn(c inet.Conn) {
 func (ids *IDService) RequestHandler(s inet.Stream) {
 	defer s.Close()
 	c := s.Conn()
+
+	bwc := ids.Host.GetBandwidthReporter()
+	s = mstream.NewMeteredStream(s, ID, c.RemotePeer(), bwc.LogRecvMessage, bwc.LogSentMessage)
 
 	w := ggio.NewDelimitedWriter(s)
 	mes := pb.Identify{}

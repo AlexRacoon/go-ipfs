@@ -3,6 +3,7 @@ package host
 import (
 	ma "github.com/jbenet/go-ipfs/Godeps/_workspace/src/github.com/jbenet/go-multiaddr"
 	context "github.com/jbenet/go-ipfs/Godeps/_workspace/src/golang.org/x/net/context"
+	metrics "github.com/jbenet/go-ipfs/metrics"
 	inet "github.com/jbenet/go-ipfs/p2p/net"
 	peer "github.com/jbenet/go-ipfs/p2p/peer"
 	protocol "github.com/jbenet/go-ipfs/p2p/protocol"
@@ -57,4 +58,6 @@ type Host interface {
 
 	// Close shuts down the host, its Network, and services.
 	Close() error
+
+	GetBandwidthReporter() metrics.Reporter
 }

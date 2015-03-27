@@ -4,6 +4,8 @@ import (
 	ma "github.com/jbenet/go-ipfs/Godeps/_workspace/src/github.com/jbenet/go-multiaddr"
 	goprocess "github.com/jbenet/go-ipfs/Godeps/_workspace/src/github.com/jbenet/goprocess"
 	context "github.com/jbenet/go-ipfs/Godeps/_workspace/src/golang.org/x/net/context"
+	metrics "github.com/jbenet/go-ipfs/metrics"
+	mstream "github.com/jbenet/go-ipfs/p2p/protocol/stream"
 	eventlog "github.com/jbenet/go-ipfs/thirdparty/eventlog"
 
 	inet "github.com/jbenet/go-ipfs/p2p/net"
@@ -41,6 +43,8 @@ type BasicHost struct {
 	natmgr  *natManager
 
 	proc goprocess.Process
+
+	bwc *metrics.BandwidthCounter
 }
 
 // New constructs and sets up a new *BasicHost with given Network
@@ -48,6 +52,7 @@ func New(net inet.Network, opts ...Option) *BasicHost {
 	h := &BasicHost{
 		network: net,
 		mux:     protocol.NewMux(),
+		bwc:     metrics.NewBandwidthCounter(),
 	}
 
 	h.proc = goprocess.WithTeardown(func() error {
@@ -81,8 +86,17 @@ func (h *BasicHost) newConnHandler(c inet.Conn) {
 }
 
 // newStreamHandler is the remote-opened stream handler for inet.Network
+// TODO: this feels a bit wonky
 func (h *BasicHost) newStreamHandler(s inet.Stream) {
-	h.Mux().Handle(s)
+	protoID, handle, err := h.Mux().ReadHeader(s)
+	if err != nil {
+		log.Error("protocol mux failed: %s", err)
+		return
+	}
+
+	logStream := mstream.NewMeteredStream(s, protoID, s.Conn().RemotePeer(), h.bwc.LogSentMessage, h.bwc.LogRecvMessage)
+
+	go handle(logStream)
 }
 
 // ID returns the (local) peer.ID associated with this Host
@@ -131,12 +145,14 @@ func (h *BasicHost) NewStream(pid protocol.ID, p peer.ID) (inet.Stream, error) {
 		return nil, err
 	}
 
-	if err := protocol.WriteHeader(s, pid); err != nil {
-		s.Close()
+	logStream := mstream.NewMeteredStream(s, pid, p, h.bwc.LogSentMessage, h.bwc.LogRecvMessage)
+
+	if err := protocol.WriteHeader(logStream, pid); err != nil {
+		logStream.Close()
 		return nil, err
 	}
 
-	return s, nil
+	return logStream, nil
 }
 
 // Connect ensures there is a connection between this host and the peer with
@@ -209,4 +225,8 @@ func (h *BasicHost) Addrs() []ma.Multiaddr {
 // Close shuts down the Host's services (network, etc).
 func (h *BasicHost) Close() error {
 	return h.proc.Close()
+}
+
+func (h *BasicHost) GetBandwidthReporter() metrics.Reporter {
+	return h.bwc
 }
