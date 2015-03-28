@@ -16,6 +16,9 @@ import (
 	peer "github.com/jbenet/go-ipfs/p2p/peer"
 )
 
+// ConnWrapper is any function that wraps a raw multiaddr connection
+type ConnWrapper func(manet.Conn) manet.Conn
+
 // listener is an object that can accept connections. It implements Listener
 type listener struct {
 	manet.Listener
@@ -23,7 +26,7 @@ type listener struct {
 	local peer.ID    // LocalPeer is the identity of the local Peer
 	privk ic.PrivKey // private key to use to initialize secure conns
 
-	wrapper func(Conn) Conn
+	wrapper ConnWrapper
 
 	cg ctxgroup.ContextGroup
 }
@@ -78,17 +81,17 @@ func (l *listener) Accept() (net.Conn, error) {
 		}
 
 		log.Debugf("listener %s got connection: %s <---> %s", l, maconn.LocalMultiaddr(), maconn.RemoteMultiaddr())
+		// If we have a wrapper func, wrap this conn
+		if l.wrapper != nil {
+			maconn = l.wrapper(maconn)
+		}
+
 		c, err := newSingleConn(ctx, l.local, "", maconn)
 		if err != nil {
 			if catcher.IsTemporary(err) {
 				continue
 			}
 			return nil, err
-		}
-
-		// If we have a wrapper func, wrap this conn
-		if l.wrapper != nil {
-			c = l.wrapper(c)
 		}
 
 		if l.privk == nil {
@@ -131,7 +134,7 @@ func (l *listener) Loggable() map[string]interface{} {
 }
 
 // Listen listens on the particular multiaddr, with given peer and peerstore.
-func Listen(ctx context.Context, addr ma.Multiaddr, local peer.ID, sk ic.PrivKey, connWrapper func(Conn) Conn) (Listener, error) {
+func Listen(ctx context.Context, addr ma.Multiaddr, local peer.ID, sk ic.PrivKey, connWrapper ConnWrapper) (Listener, error) {
 	ml, err := manetListen(addr)
 	if err != nil {
 		return nil, err

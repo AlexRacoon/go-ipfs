@@ -10,6 +10,7 @@ import (
 	lgbl "github.com/jbenet/go-ipfs/util/eventlog/loggables"
 
 	ma "github.com/jbenet/go-ipfs/Godeps/_workspace/src/github.com/jbenet/go-multiaddr"
+	manet "github.com/jbenet/go-ipfs/Godeps/_workspace/src/github.com/jbenet/go-multiaddr-net"
 	ps "github.com/jbenet/go-ipfs/Godeps/_workspace/src/github.com/jbenet/go-peerstream"
 	context "github.com/jbenet/go-ipfs/Godeps/_workspace/src/golang.org/x/net/context"
 	multierr "github.com/jbenet/go-ipfs/thirdparty/multierr"
@@ -63,8 +64,8 @@ func (s *Swarm) setupListener(maddr ma.Multiaddr) error {
 		log.Warning("Listener not given PrivateKey, so WILL NOT SECURE conns.")
 	}
 	log.Debugf("Swarm Listening at %s", maddr)
-	list, err := conn.Listen(s.cg.Context(), maddr, s.local, sk, func(c conn.Conn) conn.Conn {
-		return mconn.NewMeteredConn(c, s.bwc.LogRecvMessagePeer, s.bwc.LogSentMessagePeer)
+	list, err := conn.Listen(s.cg.Context(), maddr, s.local, sk, func(c manet.Conn) manet.Conn {
+		return mconn.WrapConn(s.bwc, c)
 	})
 	if err != nil {
 		return err

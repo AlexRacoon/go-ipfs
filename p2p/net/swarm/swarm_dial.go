@@ -319,6 +319,9 @@ func (s *Swarm) dial(ctx context.Context, p peer.ID) (*Conn, error) {
 		LocalPeer:  s.local,
 		LocalAddrs: localAddrs,
 		PrivateKey: sk,
+		Wrapper: func(c manet.Conn) manet.Conn {
+			return mconn.WrapConn(s.bwc, c)
+		},
 	}
 
 	// try to get a connection to any addr
@@ -454,8 +457,7 @@ func (s *Swarm) dialAddr(ctx context.Context, d *conn.Dialer, p peer.ID, addr ma
 // needs to add the Conn to the StreamSwarm, then run newConnSetup
 func dialConnSetup(ctx context.Context, s *Swarm, connC conn.Conn) (*Conn, error) {
 
-	mc := mconn.NewMeteredConn(connC, s.bwc.LogRecvMessagePeer, s.bwc.LogSentMessagePeer)
-	psC, err := s.swarm.AddConn(mc)
+	psC, err := s.swarm.AddConn(connC)
 	if err != nil {
 		// connC is closed by caller if we fail.
 		return nil, fmt.Errorf("failed to add conn to ps.Swarm: %s", err)

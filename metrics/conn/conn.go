@@ -1,18 +1,26 @@
 package meterconn
 
 import (
+	"fmt"
+	"reflect"
+
+	manet "github.com/jbenet/go-ipfs/Godeps/_workspace/src/github.com/jbenet/go-multiaddr-net"
 	metrics "github.com/jbenet/go-ipfs/metrics"
-	conn "github.com/jbenet/go-ipfs/p2p/net/conn"
 )
 
 type MeteredConn struct {
-	mesRecv metrics.MeterPeerCallback
-	mesSent metrics.MeterPeerCallback
+	mesRecv metrics.MeterCallback
+	mesSent metrics.MeterCallback
 
-	conn.Conn
+	manet.Conn
 }
 
-func NewMeteredConn(base conn.Conn, rcb metrics.MeterPeerCallback, scb metrics.MeterPeerCallback) conn.Conn {
+func WrapConn(bwc metrics.Reporter, c manet.Conn) manet.Conn {
+	return newMeteredConn(c, bwc.LogRecvMessage, bwc.LogSentMessage)
+}
+
+func newMeteredConn(base manet.Conn, rcb metrics.MeterCallback, scb metrics.MeterCallback) manet.Conn {
+	fmt.Printf("NEW METER ON: %s\n", reflect.TypeOf(base))
 	return &MeteredConn{
 		Conn:    base,
 		mesRecv: rcb,
@@ -23,13 +31,13 @@ func NewMeteredConn(base conn.Conn, rcb metrics.MeterPeerCallback, scb metrics.M
 func (mc *MeteredConn) Read(b []byte) (int, error) {
 	n, err := mc.Conn.Read(b)
 
-	mc.mesRecv(int64(n), mc.Conn.RemotePeer())
+	mc.mesRecv(int64(n))
 	return n, err
 }
 
 func (mc *MeteredConn) Write(b []byte) (int, error) {
 	n, err := mc.Conn.Write(b)
 
-	mc.mesSent(int64(n), mc.Conn.RemotePeer())
+	mc.mesSent(int64(n))
 	return n, err
 }

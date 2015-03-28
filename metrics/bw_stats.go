@@ -31,6 +31,14 @@ func NewBandwidthCounter() *BandwidthCounter {
 	}
 }
 
+func (bwc *BandwidthCounter) LogSentMessage(size int64) {
+	bwc.totalOut.Mark(size)
+}
+
+func (bwc *BandwidthCounter) LogRecvMessage(size int64) {
+	bwc.totalIn.Mark(size)
+}
+
 func (bwc *BandwidthCounter) LogSentMessagePeer(size int64, p peer.ID) {
 	bwc.totalOut.Mark(size)
 

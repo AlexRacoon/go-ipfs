@@ -154,11 +154,11 @@ var statBwPollCmd = &cmds.Command{
 					fmt.Fprintln(out, "Total Up\t Total Down\t Rate Up\t Rate Down")
 					first = false
 				}
-				fmt.Fprint(out, "\r                                                \r")
-				fmt.Fprintf(out, "%s\t\t", humanize.Bytes(uint64(bs.TotalOut)))
-				fmt.Fprintf(out, " %s\t\t", humanize.Bytes(uint64(bs.TotalIn)))
-				fmt.Fprintf(out, " %s/s \t", humanize.Bytes(uint64(bs.RateOut)))
-				fmt.Fprintf(out, " %s/s", humanize.Bytes(uint64(bs.RateIn)))
+				fmt.Fprint(out, "\r")
+				fmt.Fprintf(out, "%s \t\t", humanize.Bytes(uint64(bs.TotalOut)))
+				fmt.Fprintf(out, " %s \t\t", humanize.Bytes(uint64(bs.TotalIn)))
+				fmt.Fprintf(out, " %s/s   \t", humanize.Bytes(uint64(bs.RateOut)))
+				fmt.Fprintf(out, " %s/s     ", humanize.Bytes(uint64(bs.RateIn)))
 				return out, nil
 
 			}
