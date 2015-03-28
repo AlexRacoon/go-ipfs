@@ -235,7 +235,7 @@
 		},
 		{
 			"ImportPath": "github.com/whyrusleeping/go-metrics",
-			"Rev": "7310e5337843ef5fd6f34f4bb823286c45d79165"
+			"Rev": "1cd8009604ec2238b5a71305a0ecd974066e0e16"
 		},
 		{
 			"ImportPath": "gopkg.in/fsnotify.v1",
