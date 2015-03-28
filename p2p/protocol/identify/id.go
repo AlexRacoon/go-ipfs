@@ -9,12 +9,12 @@ import (
 	ma "github.com/jbenet/go-ipfs/Godeps/_workspace/src/github.com/jbenet/go-multiaddr"
 	context "github.com/jbenet/go-ipfs/Godeps/_workspace/src/golang.org/x/net/context"
 
+	mstream "github.com/jbenet/go-ipfs/metrics/stream"
 	host "github.com/jbenet/go-ipfs/p2p/host"
 	inet "github.com/jbenet/go-ipfs/p2p/net"
 	peer "github.com/jbenet/go-ipfs/p2p/peer"
 	protocol "github.com/jbenet/go-ipfs/p2p/protocol"
 	pb "github.com/jbenet/go-ipfs/p2p/protocol/identify/pb"
-	mstream "github.com/jbenet/go-ipfs/p2p/protocol/stream"
 	config "github.com/jbenet/go-ipfs/repo/config"
 	eventlog "github.com/jbenet/go-ipfs/thirdparty/eventlog"
 	lgbl "github.com/jbenet/go-ipfs/util/eventlog/loggables"
@@ -82,7 +82,7 @@ func (ids *IDService) IdentifyConn(c inet.Conn) {
 		log.Event(context.TODO(), "IdentifyOpenFailed", c.RemotePeer())
 	} else {
 		bwc := ids.Host.GetBandwidthReporter()
-		s = mstream.NewMeteredStream(s, ID, c.RemotePeer(), bwc.LogRecvMessage, bwc.LogSentMessage)
+		s = mstream.NewMeteredStream(s, ID, bwc.LogRecvMessageProto, bwc.LogSentMessageProto)
 
 		// ok give the response to our handler.
 		if err := protocol.WriteHeader(s, ID); err != nil {
@@ -110,7 +110,7 @@ func (ids *IDService) RequestHandler(s inet.Stream) {
 	c := s.Conn()
 
 	bwc := ids.Host.GetBandwidthReporter()
-	s = mstream.NewMeteredStream(s, ID, c.RemotePeer(), bwc.LogRecvMessage, bwc.LogSentMessage)
+	s = mstream.NewMeteredStream(s, ID, bwc.LogRecvMessageProto, bwc.LogSentMessageProto)
 
 	w := ggio.NewDelimitedWriter(s)
 	mes := pb.Identify{}

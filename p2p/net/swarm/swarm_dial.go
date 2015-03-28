@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	mconn "github.com/jbenet/go-ipfs/metrics/conn"
 	conn "github.com/jbenet/go-ipfs/p2p/net/conn"
 	addrutil "github.com/jbenet/go-ipfs/p2p/net/swarm/addr"
 	peer "github.com/jbenet/go-ipfs/p2p/peer"
@@ -453,7 +454,8 @@ func (s *Swarm) dialAddr(ctx context.Context, d *conn.Dialer, p peer.ID, addr ma
 // needs to add the Conn to the StreamSwarm, then run newConnSetup
 func dialConnSetup(ctx context.Context, s *Swarm, connC conn.Conn) (*Conn, error) {
 
-	psC, err := s.swarm.AddConn(connC)
+	mc := mconn.NewMeteredConn(connC, s.bwc.LogRecvMessagePeer, s.bwc.LogSentMessagePeer)
+	psC, err := s.swarm.AddConn(mc)
 	if err != nil {
 		// connC is closed by caller if we fail.
 		return nil, fmt.Errorf("failed to add conn to ps.Swarm: %s", err)

@@ -1,7 +1,7 @@
 package metrics
 
 import (
-	gm "github.com/jbenet/go-ipfs/Godeps/_workspace/src/github.com/rcrowley/go-metrics"
+	gm "github.com/jbenet/go-ipfs/Godeps/_workspace/src/github.com/whyrusleeping/go-metrics"
 	"sync"
 
 	peer "github.com/jbenet/go-ipfs/p2p/peer"
@@ -31,23 +31,27 @@ func NewBandwidthCounter() *BandwidthCounter {
 	}
 }
 
-func (bwc *BandwidthCounter) LogSentMessage(size int64, proto protocol.ID, p peer.ID) {
+func (bwc *BandwidthCounter) LogSentMessagePeer(size int64, p peer.ID) {
 	bwc.totalOut.Mark(size)
 
-	meter := gm.GetOrRegisterMeter("/proto/out/"+string(proto), bwc.reg)
-	meter.Mark(size)
-
-	meter = gm.GetOrRegisterMeter("/peer/out/"+string(p), bwc.reg)
+	meter := gm.GetOrRegisterMeter("/peer/out/"+string(p), bwc.reg)
 	meter.Mark(size)
 }
 
-func (bwc *BandwidthCounter) LogRecvMessage(size int64, proto protocol.ID, p peer.ID) {
+func (bwc *BandwidthCounter) LogRecvMessagePeer(size int64, p peer.ID) {
 	bwc.totalIn.Mark(size)
 
-	meter := gm.GetOrRegisterMeter("/proto/in/"+string(proto), bwc.reg)
+	meter := gm.GetOrRegisterMeter("/peer/in/"+string(p), bwc.reg)
 	meter.Mark(size)
+}
 
-	meter = gm.GetOrRegisterMeter("/peer/in/"+string(p), bwc.reg)
+func (bwc *BandwidthCounter) LogSentMessageProto(size int64, proto protocol.ID) {
+	meter := gm.GetOrRegisterMeter("/proto/out/"+string(proto), bwc.reg)
+	meter.Mark(size)
+}
+
+func (bwc *BandwidthCounter) LogRecvMessageProto(size int64, proto protocol.ID) {
+	meter := gm.GetOrRegisterMeter("/proto/in/"+string(proto), bwc.reg)
 	meter.Mark(size)
 }
 
@@ -58,8 +62,8 @@ func (bwc *BandwidthCounter) GetBandwidthForPeer(p peer.ID) (out Stats) {
 	return Stats{
 		TotalIn:  inMeter.Count(),
 		TotalOut: outMeter.Count(),
-		RateIn:   inMeter.Rate1(),
-		RateOut:  outMeter.Rate1(),
+		RateIn:   inMeter.RateFine(),
+		RateOut:  outMeter.RateFine(),
 	}
 }
 
@@ -70,8 +74,8 @@ func (bwc *BandwidthCounter) GetBandwidthForProtocol(proto protocol.ID) (out Sta
 	return Stats{
 		TotalIn:  inMeter.Count(),
 		TotalOut: outMeter.Count(),
-		RateIn:   inMeter.Rate1(),
-		RateOut:  outMeter.Rate1(),
+		RateIn:   inMeter.RateFine(),
+		RateOut:  outMeter.RateFine(),
 	}
 }
 
@@ -79,7 +83,7 @@ func (bwc *BandwidthCounter) GetBandwidthTotals() (out Stats) {
 	return Stats{
 		TotalIn:  bwc.totalIn.Count(),
 		TotalOut: bwc.totalOut.Count(),
-		RateIn:   bwc.totalIn.Rate1(),
-		RateOut:  bwc.totalOut.Rate1(),
+		RateIn:   bwc.totalIn.RateFine(),
+		RateOut:  bwc.totalOut.RateFine(),
 	}
 }

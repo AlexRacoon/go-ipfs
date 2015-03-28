@@ -3,6 +3,7 @@ package testutil
 import (
 	"testing"
 
+	metrics "github.com/jbenet/go-ipfs/metrics"
 	bhost "github.com/jbenet/go-ipfs/p2p/host/basic"
 	inet "github.com/jbenet/go-ipfs/p2p/net"
 	swarm "github.com/jbenet/go-ipfs/p2p/net/swarm"
@@ -18,7 +19,7 @@ func GenSwarmNetwork(t *testing.T, ctx context.Context) *swarm.Network {
 	ps := peer.NewPeerstore()
 	ps.AddPubKey(p.ID, p.PubKey)
 	ps.AddPrivKey(p.ID, p.PrivKey)
-	n, err := swarm.NewNetwork(ctx, []ma.Multiaddr{p.Addr}, p.ID, ps)
+	n, err := swarm.NewNetwork(ctx, []ma.Multiaddr{p.Addr}, p.ID, ps, metrics.NewBandwidthCounter())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +35,7 @@ func DivulgeAddresses(a, b inet.Network) {
 
 func GenHostSwarm(t *testing.T, ctx context.Context) *bhost.BasicHost {
 	n := GenSwarmNetwork(t, ctx)
-	return bhost.New(n)
+	return bhost.New(n, metrics.NewBandwidthCounter())
 }
 
 var RandPeerID = tu.RandPeerID

@@ -234,8 +234,8 @@
 			"Rev": "7dbad50ab5b31073856416cdcfeb2796d682f844"
 		},
 		{
-			"ImportPath": "github.com/rcrowley/go-metrics",
-			"Rev": "dee209f2455f101a5e4e593dea94872d2c62d85d"
+			"ImportPath": "github.com/whyrusleeping/go-metrics",
+			"Rev": "7310e5337843ef5fd6f34f4bb823286c45d79165"
 		},
 		{
 			"ImportPath": "gopkg.in/fsnotify.v1",

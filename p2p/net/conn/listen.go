@@ -23,6 +23,8 @@ type listener struct {
 	local peer.ID    // LocalPeer is the identity of the local Peer
 	privk ic.PrivKey // private key to use to initialize secure conns
 
+	wrapper func(Conn) Conn
+
 	cg ctxgroup.ContextGroup
 }
 
@@ -84,6 +86,11 @@ func (l *listener) Accept() (net.Conn, error) {
 			return nil, err
 		}
 
+		// If we have a wrapper func, wrap this conn
+		if l.wrapper != nil {
+			c = l.wrapper(c)
+		}
+
 		if l.privk == nil {
 			log.Warning("listener %s listening INSECURELY!", l)
 			return c, nil
@@ -124,7 +131,7 @@ func (l *listener) Loggable() map[string]interface{} {
 }
 
 // Listen listens on the particular multiaddr, with given peer and peerstore.
-func Listen(ctx context.Context, addr ma.Multiaddr, local peer.ID, sk ic.PrivKey) (Listener, error) {
+func Listen(ctx context.Context, addr ma.Multiaddr, local peer.ID, sk ic.PrivKey, connWrapper func(Conn) Conn) (Listener, error) {
 	ml, err := manetListen(addr)
 	if err != nil {
 		return nil, err
@@ -135,6 +142,7 @@ func Listen(ctx context.Context, addr ma.Multiaddr, local peer.ID, sk ic.PrivKey
 		local:    local,
 		privk:    sk,
 		cg:       ctxgroup.WithContext(ctx),
+		wrapper:  connWrapper,
 	}
 	l.cg.SetTeardown(l.teardown)
 

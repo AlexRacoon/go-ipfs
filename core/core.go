@@ -241,7 +241,10 @@ func (n *IpfsNode) startOnlineServices(ctx context.Context, routingOption Routin
 		return err
 	}
 
-	peerhost, err := hostOption(ctx, n.Identity, n.Peerstore)
+	// Set reporter
+	n.Reporter = metrics.NewBandwidthCounter()
+
+	peerhost, err := hostOption(ctx, n.Identity, n.Peerstore, n.Reporter)
 	if err != nil {
 		return debugerror.Wrap(err)
 	}
@@ -254,9 +257,6 @@ func (n *IpfsNode) startOnlineServices(ctx context.Context, routingOption Routin
 	if err := startListening(ctx, n.PeerHost, n.Repo.Config()); err != nil {
 		return debugerror.Wrap(err)
 	}
-
-	// Set reporter
-	n.Reporter = n.PeerHost.GetBandwidthReporter()
 
 	n.Reprovider = rp.NewReprovider(n.Routing, n.Blockstore)
 	go n.Reprovider.ProvideEvery(ctx, kReprovideFrequency)
@@ -470,20 +470,20 @@ func listenAddresses(cfg *config.Config) ([]ma.Multiaddr, error) {
 	return listen, nil
 }
 
-type HostOption func(ctx context.Context, id peer.ID, ps peer.Peerstore) (p2phost.Host, error)
+type HostOption func(ctx context.Context, id peer.ID, ps peer.Peerstore, bwr metrics.Reporter) (p2phost.Host, error)
 
 var DefaultHostOption HostOption = constructPeerHost
 
 // isolates the complex initialization steps
-func constructPeerHost(ctx context.Context, id peer.ID, ps peer.Peerstore) (p2phost.Host, error) {
+func constructPeerHost(ctx context.Context, id peer.ID, ps peer.Peerstore, bwr metrics.Reporter) (p2phost.Host, error) {
 
 	// no addresses to begin with. we'll start later.
-	network, err := swarm.NewNetwork(ctx, nil, id, ps)
+	network, err := swarm.NewNetwork(ctx, nil, id, ps, bwr)
 	if err != nil {
 		return nil, debugerror.Wrap(err)
 	}
 
-	host := p2pbhost.New(network, p2pbhost.NATPortMap)
+	host := p2pbhost.New(network, bwr, p2pbhost.NATPortMap)
 	return host, nil
 }
 

@@ -3,6 +3,7 @@ package swarm
 import (
 	"fmt"
 
+	mconn "github.com/jbenet/go-ipfs/metrics/conn"
 	inet "github.com/jbenet/go-ipfs/p2p/net"
 	conn "github.com/jbenet/go-ipfs/p2p/net/conn"
 	addrutil "github.com/jbenet/go-ipfs/p2p/net/swarm/addr"
@@ -62,7 +63,9 @@ func (s *Swarm) setupListener(maddr ma.Multiaddr) error {
 		log.Warning("Listener not given PrivateKey, so WILL NOT SECURE conns.")
 	}
 	log.Debugf("Swarm Listening at %s", maddr)
-	list, err := conn.Listen(s.cg.Context(), maddr, s.local, sk)
+	list, err := conn.Listen(s.cg.Context(), maddr, s.local, sk, func(c conn.Conn) conn.Conn {
+		return mconn.NewMeteredConn(c, s.bwc.LogRecvMessagePeer, s.bwc.LogSentMessagePeer)
+	})
 	if err != nil {
 		return err
 	}

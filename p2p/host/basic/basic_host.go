@@ -5,7 +5,7 @@ import (
 	goprocess "github.com/jbenet/go-ipfs/Godeps/_workspace/src/github.com/jbenet/goprocess"
 	context "github.com/jbenet/go-ipfs/Godeps/_workspace/src/golang.org/x/net/context"
 	metrics "github.com/jbenet/go-ipfs/metrics"
-	mstream "github.com/jbenet/go-ipfs/p2p/protocol/stream"
+	mstream "github.com/jbenet/go-ipfs/metrics/stream"
 	eventlog "github.com/jbenet/go-ipfs/thirdparty/eventlog"
 
 	inet "github.com/jbenet/go-ipfs/p2p/net"
@@ -44,15 +44,15 @@ type BasicHost struct {
 
 	proc goprocess.Process
 
-	bwc *metrics.BandwidthCounter
+	bwc metrics.Reporter
 }
 
 // New constructs and sets up a new *BasicHost with given Network
-func New(net inet.Network, opts ...Option) *BasicHost {
+func New(net inet.Network, bwc metrics.Reporter, opts ...Option) *BasicHost {
 	h := &BasicHost{
 		network: net,
 		mux:     protocol.NewMux(),
-		bwc:     metrics.NewBandwidthCounter(),
+		bwc:     bwc,
 	}
 
 	h.proc = goprocess.WithTeardown(func() error {
@@ -94,7 +94,7 @@ func (h *BasicHost) newStreamHandler(s inet.Stream) {
 		return
 	}
 
-	logStream := mstream.NewMeteredStream(s, protoID, s.Conn().RemotePeer(), h.bwc.LogSentMessage, h.bwc.LogRecvMessage)
+	logStream := mstream.NewMeteredStream(s, protoID, h.bwc.LogSentMessageProto, h.bwc.LogRecvMessageProto)
 
 	go handle(logStream)
 }
@@ -145,7 +145,7 @@ func (h *BasicHost) NewStream(pid protocol.ID, p peer.ID) (inet.Stream, error) {
 		return nil, err
 	}
 
-	logStream := mstream.NewMeteredStream(s, pid, p, h.bwc.LogSentMessage, h.bwc.LogRecvMessage)
+	logStream := mstream.NewMeteredStream(s, pid, h.bwc.LogSentMessageProto, h.bwc.LogRecvMessageProto)
 
 	if err := protocol.WriteHeader(logStream, pid); err != nil {
 		logStream.Close()
