@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 
+	humanize "github.com/jbenet/go-ipfs/Godeps/_workspace/src/github.com/dustin/go-humanize"
+
 	cmds "github.com/jbenet/go-ipfs/commands"
 	metrics "github.com/jbenet/go-ipfs/metrics"
 	peer "github.com/jbenet/go-ipfs/p2p/peer"
@@ -86,10 +88,10 @@ var statBwCmd = &cmds.Command{
 			bs := res.Output().(*metrics.Stats)
 			out := new(bytes.Buffer)
 			fmt.Fprintln(out, "Bandwidth")
-			fmt.Fprintf(out, "TotalIn: %d\n", bs.TotalIn)
-			fmt.Fprintf(out, "TotalOut: %d\n", bs.TotalOut)
-			fmt.Fprintf(out, "RateIn: %f\n", bs.RateIn)
-			fmt.Fprintf(out, "RateOut: %f\n", bs.RateOut)
+			fmt.Fprintf(out, "TotalIn: %s\n", humanize.Bytes(uint64(bs.TotalIn)))
+			fmt.Fprintf(out, "TotalOut: %s\n", humanize.Bytes(uint64(bs.TotalOut)))
+			fmt.Fprintf(out, "RateIn: %s/s\n", humanize.Bytes(uint64(bs.RateIn)))
+			fmt.Fprintf(out, "RateOut: %s/s\n", humanize.Bytes(uint64(bs.RateOut)))
 			return out, nil
 		},
 	},
