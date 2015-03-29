@@ -12,44 +12,41 @@ type meteredStream struct {
 	protoKey protocol.ID
 	peerKey  peer.ID
 
-	stream inet.Stream
+	inet.Stream
 
 	// callbacks for reporting bandwidth usage
-	mesSent metrics.MeterProtoCallback
-	mesRecv metrics.MeterProtoCallback
+	mesSent metrics.StreamMeterCallback
+	mesRecv metrics.StreamMeterCallback
 }
 
-func NewMeteredStream(base inet.Stream, pid protocol.ID, sentCB, recvCB metrics.MeterProtoCallback) inet.Stream {
+func newMeteredStream(base inet.Stream, pid protocol.ID, p peer.ID, recvCB, sentCB metrics.StreamMeterCallback) inet.Stream {
 	return &meteredStream{
-		stream:   base,
+		Stream:   base,
 		mesSent:  sentCB,
 		mesRecv:  recvCB,
 		protoKey: pid,
+		peerKey:  p,
 	}
 }
 
+func WrapStream(base inet.Stream, pid protocol.ID, bwc metrics.Reporter) inet.Stream {
+	return newMeteredStream(base, pid, base.Conn().RemotePeer(), bwc.LogRecvMessageStream, bwc.LogSentMessageStream)
+}
+
 func (s *meteredStream) Read(b []byte) (int, error) {
-	n, err := s.stream.Read(b)
+	n, err := s.Stream.Read(b)
 
 	// Log bytes read
-	s.mesRecv(int64(n), s.protoKey)
+	s.mesRecv(int64(n), s.protoKey, s.peerKey)
 
 	return n, err
 }
 
 func (s *meteredStream) Write(b []byte) (int, error) {
-	n, err := s.stream.Write(b)
+	n, err := s.Stream.Write(b)
 
 	// Log bytes written
-	s.mesSent(int64(n), s.protoKey)
+	s.mesSent(int64(n), s.protoKey, s.peerKey)
 
 	return n, err
-}
-
-func (s *meteredStream) Close() error {
-	return s.stream.Close()
-}
-
-func (s *meteredStream) Conn() inet.Conn {
-	return s.stream.Conn()
 }

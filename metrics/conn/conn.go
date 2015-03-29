@@ -1,9 +1,6 @@
 package meterconn
 
 import (
-	"fmt"
-	"reflect"
-
 	manet "github.com/jbenet/go-ipfs/Godeps/_workspace/src/github.com/jbenet/go-multiaddr-net"
 	metrics "github.com/jbenet/go-ipfs/metrics"
 )
@@ -20,7 +17,6 @@ func WrapConn(bwc metrics.Reporter, c manet.Conn) manet.Conn {
 }
 
 func newMeteredConn(base manet.Conn, rcb metrics.MeterCallback, scb metrics.MeterCallback) manet.Conn {
-	fmt.Printf("NEW METER ON: %s\n", reflect.TypeOf(base))
 	return &MeteredConn{
 		Conn:    base,
 		mesRecv: rcb,

@@ -94,7 +94,7 @@ func (h *BasicHost) newStreamHandler(s inet.Stream) {
 		return
 	}
 
-	logStream := mstream.NewMeteredStream(s, protoID, h.bwc.LogSentMessageProto, h.bwc.LogRecvMessageProto)
+	logStream := mstream.WrapStream(s, protoID, h.bwc)
 
 	go handle(logStream)
 }
@@ -145,7 +145,7 @@ func (h *BasicHost) NewStream(pid protocol.ID, p peer.ID) (inet.Stream, error) {
 		return nil, err
 	}
 
-	logStream := mstream.NewMeteredStream(s, pid, h.bwc.LogSentMessageProto, h.bwc.LogRecvMessageProto)
+	logStream := mstream.WrapStream(s, pid, h.bwc)
 
 	if err := protocol.WriteHeader(logStream, pid); err != nil {
 		logStream.Close()

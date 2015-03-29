@@ -82,7 +82,7 @@ func (ids *IDService) IdentifyConn(c inet.Conn) {
 		log.Event(context.TODO(), "IdentifyOpenFailed", c.RemotePeer())
 	} else {
 		bwc := ids.Host.GetBandwidthReporter()
-		s = mstream.NewMeteredStream(s, ID, bwc.LogRecvMessageProto, bwc.LogSentMessageProto)
+		s = mstream.WrapStream(s, ID, bwc)
 
 		// ok give the response to our handler.
 		if err := protocol.WriteHeader(s, ID); err != nil {
@@ -110,7 +110,7 @@ func (ids *IDService) RequestHandler(s inet.Stream) {
 	c := s.Conn()
 
 	bwc := ids.Host.GetBandwidthReporter()
-	s = mstream.NewMeteredStream(s, ID, bwc.LogRecvMessageProto, bwc.LogSentMessageProto)
+	s = mstream.WrapStream(s, ID, bwc)
 
 	w := ggio.NewDelimitedWriter(s)
 	mes := pb.Identify{}

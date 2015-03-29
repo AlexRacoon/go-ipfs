@@ -3,6 +3,7 @@ package swarm
 import (
 	"testing"
 
+	metrics "github.com/jbenet/go-ipfs/metrics"
 	addrutil "github.com/jbenet/go-ipfs/p2p/net/swarm/addr"
 	peer "github.com/jbenet/go-ipfs/p2p/peer"
 	testutil "github.com/jbenet/go-ipfs/util/testutil"
@@ -65,11 +66,11 @@ func TestFilterAddrs(t *testing.T) {
 	ps := peer.NewPeerstore()
 	ctx := context.Background()
 
-	if _, err := NewNetwork(ctx, bad, id, ps); err == nil {
+	if _, err := NewNetwork(ctx, bad, id, ps, metrics.NewBandwidthCounter()); err == nil {
 		t.Fatal("should have failed to create swarm")
 	}
 
-	if _, err := NewNetwork(ctx, goodAndBad, id, ps); err != nil {
+	if _, err := NewNetwork(ctx, goodAndBad, id, ps, metrics.NewBandwidthCounter()); err != nil {
 		t.Fatal("should have succeeded in creating swarm", err)
 	}
 }

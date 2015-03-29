@@ -39,28 +39,20 @@ func (bwc *BandwidthCounter) LogRecvMessage(size int64) {
 	bwc.totalIn.Mark(size)
 }
 
-func (bwc *BandwidthCounter) LogSentMessagePeer(size int64, p peer.ID) {
-	bwc.totalOut.Mark(size)
-
+func (bwc *BandwidthCounter) LogSentMessageStream(size int64, proto protocol.ID, p peer.ID) {
 	meter := gm.GetOrRegisterMeter("/peer/out/"+string(p), bwc.reg)
 	meter.Mark(size)
+
+	pmeter := gm.GetOrRegisterMeter("/proto/out/"+string(proto), bwc.reg)
+	pmeter.Mark(size)
 }
 
-func (bwc *BandwidthCounter) LogRecvMessagePeer(size int64, p peer.ID) {
-	bwc.totalIn.Mark(size)
-
+func (bwc *BandwidthCounter) LogRecvMessageStream(size int64, proto protocol.ID, p peer.ID) {
 	meter := gm.GetOrRegisterMeter("/peer/in/"+string(p), bwc.reg)
 	meter.Mark(size)
-}
 
-func (bwc *BandwidthCounter) LogSentMessageProto(size int64, proto protocol.ID) {
-	meter := gm.GetOrRegisterMeter("/proto/out/"+string(proto), bwc.reg)
-	meter.Mark(size)
-}
-
-func (bwc *BandwidthCounter) LogRecvMessageProto(size int64, proto protocol.ID) {
-	meter := gm.GetOrRegisterMeter("/proto/in/"+string(proto), bwc.reg)
-	meter.Mark(size)
+	pmeter := gm.GetOrRegisterMeter("/proto/in/"+string(proto), bwc.reg)
+	pmeter.Mark(size)
 }
 
 func (bwc *BandwidthCounter) GetBandwidthForPeer(p peer.ID) (out Stats) {

@@ -38,7 +38,7 @@ func TestCallbacksWork(t *testing.T) {
 		recv += n
 	}
 
-	ms := NewMeteredStream(fake, protocol.ID("TEST"), peer.ID("BOB"), sentCB, recvCB)
+	ms := newMeteredStream(fake, protocol.ID("TEST"), peer.ID("PEER"), recvCB, sentCB)
 
 	toWrite := int64(100000)
 	toRead := int64(100000)
@@ -56,7 +56,7 @@ func TestCallbacksWork(t *testing.T) {
 	}
 
 	if toWrite != sent {
-		t.Fatal("incorrectly reported writes")
+		t.Fatal("incorrectly reported writes", toWrite, sent)
 	}
 
 	n, err = io.Copy(ioutil.Discard, ms)
