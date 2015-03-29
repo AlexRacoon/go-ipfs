@@ -134,7 +134,7 @@ func (l *listener) Loggable() map[string]interface{} {
 }
 
 // Listen listens on the particular multiaddr, with given peer and peerstore.
-func Listen(ctx context.Context, addr ma.Multiaddr, local peer.ID, sk ic.PrivKey, connWrapper ConnWrapper) (Listener, error) {
+func Listen(ctx context.Context, addr ma.Multiaddr, local peer.ID, sk ic.PrivKey) (Listener, error) {
 	ml, err := manetListen(addr)
 	if err != nil {
 		return nil, err
@@ -145,13 +145,22 @@ func Listen(ctx context.Context, addr ma.Multiaddr, local peer.ID, sk ic.PrivKey
 		local:    local,
 		privk:    sk,
 		cg:       ctxgroup.WithContext(ctx),
-		wrapper:  connWrapper,
 	}
 	l.cg.SetTeardown(l.teardown)
 
 	log.Debugf("Conn Listener on %s", l.Multiaddr())
 	log.Event(ctx, "swarmListen", l)
 	return l, nil
+}
+
+type ListenerConnWrapper interface {
+	SetConnWrapper(ConnWrapper)
+}
+
+// SetConnWrapper assigns a maconn ConnWrapper to wrap all incoming
+// connections with. MUST be set _before_ calling `Accept()`
+func (l *listener) SetConnWrapper(cw ConnWrapper) {
+	l.wrapper = cw
 }
 
 func manetListen(addr ma.Multiaddr) (manet.Listener, error) {

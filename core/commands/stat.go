@@ -18,13 +18,12 @@ import (
 
 var StatsCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline:          "Query IPFS daemon statistics",
+		Tagline:          "Query IPFS statistics",
 		ShortDescription: ``,
 	},
 
 	Subcommands: map[string]*cmds.Command{
-		"bw":      statBwCmd,
-		"bw-poll": statBwPollCmd,
+		"bw": statBwCmd,
 	},
 }
 
@@ -36,6 +35,8 @@ var statBwCmd = &cmds.Command{
 	Options: []cmds.Option{
 		cmds.StringOption("peer", "p", "specify a peer to print bandwidth for"),
 		cmds.StringOption("proto", "t", "specify a protocol to print bandwidth for"),
+		cmds.BoolOption("poll", "specify a protocol to print bandwidth for"),
+		cmds.StringOption("interval", "i", "time interval to wait between updating output"),
 	},
 
 	Run: func(req cmds.Request, res cmds.Response) {
@@ -67,73 +68,64 @@ var statBwCmd = &cmds.Command{
 			return
 		}
 
+		var pid peer.ID
 		if pfound {
-			pid, err := peer.IDB58Decode(pstr)
+			checkpid, err := peer.IDB58Decode(pstr)
 			if err != nil {
 				res.SetError(err, cmds.ErrNormal)
 				return
 			}
-
-			stats := nd.Reporter.GetBandwidthForPeer(pid)
-			res.SetOutput(&stats)
-		} else if tfound {
-			pid := protocol.ID(tstr)
-			stats := nd.Reporter.GetBandwidthForProtocol(pid)
-			res.SetOutput(&stats)
-		} else {
-			totals := nd.Reporter.GetBandwidthTotals()
-			res.SetOutput(&totals)
+			pid = checkpid
 		}
-	},
-	Type: metrics.Stats{},
-	Marshalers: cmds.MarshalerMap{
-		cmds.Text: func(res cmds.Response) (io.Reader, error) {
-			bs := res.Output().(*metrics.Stats)
-			out := new(bytes.Buffer)
-			fmt.Fprintln(out, "Bandwidth")
-			fmt.Fprintf(out, "TotalIn: %s\n", humanize.Bytes(uint64(bs.TotalIn)))
-			fmt.Fprintf(out, "TotalOut: %s\n", humanize.Bytes(uint64(bs.TotalOut)))
-			fmt.Fprintf(out, "RateIn: %s/s\n", humanize.Bytes(uint64(bs.RateIn)))
-			fmt.Fprintf(out, "RateOut: %s/s\n", humanize.Bytes(uint64(bs.RateOut)))
-			return out, nil
-		},
-	},
-}
 
-var statBwPollCmd = &cmds.Command{
-	Helptext: cmds.HelpText{
-		Tagline:          "Print ipfs bandwidth information continuously",
-		ShortDescription: ``,
-	},
-	Run: func(req cmds.Request, res cmds.Response) {
-		nd, err := req.Context().GetNode()
+		interval := time.Second
+		timeS, found, err := req.Option("interval").String()
+		if err != nil {
+			res.SetError(err, cmds.ErrNormal)
+			return
+		}
+		if found {
+			v, err := time.ParseDuration(timeS)
+			if err != nil {
+				res.SetError(err, cmds.ErrNormal)
+				return
+			}
+			interval = v
+		}
+
+		doPoll, _, err := req.Option("poll").Bool()
 		if err != nil {
 			res.SetError(err, cmds.ErrNormal)
 			return
 		}
 
-		// Must be online!
-		if !nd.OnlineMode() {
-			res.SetError(errNotOnline, cmds.ErrClient)
-			return
-		}
-
 		out := make(chan interface{})
+		res.SetOutput((<-chan interface{})(out))
+
 		go func() {
 			defer close(out)
-			tick := time.NewTicker(time.Second)
 			for {
-				select {
-				case <-req.Context().Context.Done():
-					return
-				case <-tick.C:
+				if pfound {
+					stats := nd.Reporter.GetBandwidthForPeer(pid)
+					out <- &stats
+				} else if tfound {
+					protoId := protocol.ID(tstr)
+					stats := nd.Reporter.GetBandwidthForProtocol(protoId)
+					out <- &stats
+				} else {
 					totals := nd.Reporter.GetBandwidthTotals()
 					out <- &totals
 				}
+				if !doPoll {
+					return
+				}
+				select {
+				case <-time.After(interval):
+				case <-req.Context().Context.Done():
+					return
+				}
 			}
 		}()
-
-		res.SetOutput((<-chan interface{})(out))
 	},
 	Type: metrics.Stats{},
 	Marshalers: cmds.MarshalerMap{
@@ -143,6 +135,11 @@ var statBwPollCmd = &cmds.Command{
 				return nil, u.ErrCast()
 			}
 
+			polling, _, err := res.Request().Option("poll").Bool()
+			if err != nil {
+				return nil, err
+			}
+
 			first := true
 			marshal := func(v interface{}) (io.Reader, error) {
 				bs, ok := v.(*metrics.Stats)
@@ -150,15 +147,19 @@ var statBwPollCmd = &cmds.Command{
 					return nil, u.ErrCast()
 				}
 				out := new(bytes.Buffer)
-				if first {
-					fmt.Fprintln(out, "Total Up\t Total Down\t Rate Up\t Rate Down")
-					first = false
+				if !polling {
+					printStats(out, bs)
+				} else {
+					if first {
+						fmt.Fprintln(out, "Total Up\t Total Down\t Rate Up\t Rate Down")
+						first = false
+					}
+					fmt.Fprint(out, "\r")
+					fmt.Fprintf(out, "%s \t\t", humanize.Bytes(uint64(bs.TotalOut)))
+					fmt.Fprintf(out, " %s \t\t", humanize.Bytes(uint64(bs.TotalIn)))
+					fmt.Fprintf(out, " %s/s   \t", humanize.Bytes(uint64(bs.RateOut)))
+					fmt.Fprintf(out, " %s/s     ", humanize.Bytes(uint64(bs.RateIn)))
 				}
-				fmt.Fprint(out, "\r")
-				fmt.Fprintf(out, "%s \t\t", humanize.Bytes(uint64(bs.TotalOut)))
-				fmt.Fprintf(out, " %s \t\t", humanize.Bytes(uint64(bs.TotalIn)))
-				fmt.Fprintf(out, " %s/s   \t", humanize.Bytes(uint64(bs.RateOut)))
-				fmt.Fprintf(out, " %s/s     ", humanize.Bytes(uint64(bs.RateIn)))
 				return out, nil
 
 			}
@@ -169,4 +170,12 @@ var statBwPollCmd = &cmds.Command{
 			}, nil
 		},
 	},
+}
+
+func printStats(out io.Writer, bs *metrics.Stats) {
+	fmt.Fprintln(out, "Bandwidth")
+	fmt.Fprintf(out, "TotalIn: %s\n", humanize.Bytes(uint64(bs.TotalIn)))
+	fmt.Fprintf(out, "TotalOut: %s\n", humanize.Bytes(uint64(bs.TotalOut)))
+	fmt.Fprintf(out, "RateIn: %s/s\n", humanize.Bytes(uint64(bs.RateIn)))
+	fmt.Fprintf(out, "RateOut: %s/s\n", humanize.Bytes(uint64(bs.RateOut)))
 }

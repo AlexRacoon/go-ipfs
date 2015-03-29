@@ -60,7 +60,7 @@ func setupConn(t *testing.T, ctx context.Context, secure bool) (a, b Conn, p1, p
 		key1 = nil
 		key2 = nil
 	}
-	l1, err := Listen(ctx, p1.Addr, p1.ID, key1, nil)
+	l1, err := Listen(ctx, p1.Addr, p1.ID, key1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,7 +111,7 @@ func testDialer(t *testing.T, secure bool) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	l1, err := Listen(ctx, p1.Addr, p1.ID, key1, nil)
+	l1, err := Listen(ctx, p1.Addr, p1.ID, key1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,7 +185,7 @@ func testDialerCloseEarly(t *testing.T, secure bool) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	l1, err := Listen(ctx, p1.Addr, p1.ID, key1, nil)
+	l1, err := Listen(ctx, p1.Addr, p1.ID, key1)
 	if err != nil {
 		t.Fatal(err)
 	}

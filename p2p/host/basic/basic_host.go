@@ -48,11 +48,11 @@ type BasicHost struct {
 }
 
 // New constructs and sets up a new *BasicHost with given Network
-func New(net inet.Network, bwc metrics.Reporter, opts ...Option) *BasicHost {
+func New(net inet.Network, opts ...Option) *BasicHost {
 	h := &BasicHost{
 		network: net,
 		mux:     protocol.NewMux(),
-		bwc:     bwc,
+		bwc:     metrics.NewBandwidthCounter(),
 	}
 
 	h.proc = goprocess.WithTeardown(func() error {
@@ -78,6 +78,14 @@ func New(net inet.Network, bwc metrics.Reporter, opts ...Option) *BasicHost {
 	}
 
 	return h
+}
+
+func (h *BasicHost) SetReporter(bwc metrics.Reporter) {
+	h.bwc = bwc
+}
+
+func (h *BasicHost) GetReporter() metrics.Reporter {
+	return h.bwc
 }
 
 // newConnHandler is the remote-opened conn handler for inet.Network

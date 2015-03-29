@@ -5,7 +5,6 @@ import (
 	"sort"
 	"sync"
 
-	metrics "github.com/jbenet/go-ipfs/metrics"
 	ic "github.com/jbenet/go-ipfs/p2p/crypto"
 	host "github.com/jbenet/go-ipfs/p2p/host"
 	bhost "github.com/jbenet/go-ipfs/p2p/host/basic"
@@ -67,7 +66,7 @@ func (mn *mocknet) AddPeer(k ic.PrivKey, a ma.Multiaddr) (host.Host, error) {
 		return nil, err
 	}
 
-	h := bhost.New(n, metrics.NewBandwidthCounter())
+	h := bhost.New(n)
 	log.Debugf("mocknet added listen addr for peer: %s -- %s", n.LocalPeer(), a)
 
 	mn.cg.AddChild(n.cg)

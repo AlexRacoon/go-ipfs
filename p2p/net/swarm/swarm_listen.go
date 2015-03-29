@@ -64,11 +64,15 @@ func (s *Swarm) setupListener(maddr ma.Multiaddr) error {
 		log.Warning("Listener not given PrivateKey, so WILL NOT SECURE conns.")
 	}
 	log.Debugf("Swarm Listening at %s", maddr)
-	list, err := conn.Listen(s.cg.Context(), maddr, s.local, sk, func(c manet.Conn) manet.Conn {
-		return mconn.WrapConn(s.bwc, c)
-	})
+	list, err := conn.Listen(s.cg.Context(), maddr, s.local, sk)
 	if err != nil {
 		return err
+	}
+
+	if cw, ok := list.(conn.ListenerConnWrapper); ok {
+		cw.SetConnWrapper(func(c manet.Conn) manet.Conn {
+			return mconn.WrapConn(s.bwc, c)
+		})
 	}
 
 	// AddListener to the peerstream Listener. this will begin accepting connections
